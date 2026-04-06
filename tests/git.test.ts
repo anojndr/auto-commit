@@ -92,4 +92,31 @@ describe("commitWithMessage", () => {
     expect(stdout.trimEnd()).toBe(message);
     expect(await readFile(join(repoDir, "README.md"), "utf8")).toContain("Adds more detail.");
   });
+
+  it("creates a commit with the configured author identity", async () => {
+    const repoDir = await createRepository();
+
+    await execFileAsync("git", ["config", "--unset", "user.name"], { cwd: repoDir });
+    await execFileAsync("git", ["config", "--unset", "user.email"], { cwd: repoDir });
+
+    await writeFile(join(repoDir, "README.md"), "# Auto Commit\n\nUses configured author.\n", "utf8");
+    await execFileAsync("git", ["add", "README.md"], { cwd: repoDir });
+
+    await commitWithMessage(repoDir, "chore: use configured author", {
+      author: {
+        name: "Auto Commit Bot",
+        email: "bot@example.com",
+      },
+    });
+
+    const { stdout } = await execFileAsync("git", ["log", "-1", "--pretty=%an <%ae>%n%cn <%ce>%n%B"], {
+      cwd: repoDir,
+    });
+
+    const [authorLine, committerLine, ...messageLines] = stdout.trimEnd().split("\n");
+
+    expect(authorLine).toBe("Auto Commit Bot <bot@example.com>");
+    expect(committerLine).toBe("Auto Commit Bot <bot@example.com>");
+    expect(messageLines.join("\n")).toBe("chore: use configured author");
+  });
 });

@@ -52,4 +52,39 @@ describe("loadCliEnvironment", () => {
 
     expect(loadRuntimeConfig(env).apiKey).toBe("tool-key");
   });
+
+  it("loads the optional git author identity from .env", async () => {
+    const invocationCwd = await createTempDirectory("auto-commit-cwd-");
+    const toolRoot = await createTempDirectory("auto-commit-tool-");
+
+    await writeFile(
+      join(toolRoot, ".env"),
+      ["GEMINI_API_KEY=tool-key", "GIT_AUTHOR_NAME=Auto Commit Bot", "GIT_AUTHOR_EMAIL=bot@example.com"].join("\n"),
+      "utf8",
+    );
+
+    const env: NodeJS.ProcessEnv = {};
+
+    loadCliEnvironment({
+      cwd: invocationCwd,
+      env,
+      moduleUrl: `file://${join(toolRoot, "dist", "cli.js")}`,
+    });
+
+    expect(loadRuntimeConfig(env).gitAuthor).toEqual({
+      name: "Auto Commit Bot",
+      email: "bot@example.com",
+    });
+  });
+});
+
+describe("loadRuntimeConfig", () => {
+  it("requires both git author variables when either one is set", () => {
+    expect(() =>
+      loadRuntimeConfig({
+        GEMINI_API_KEY: "tool-key",
+        GIT_AUTHOR_NAME: "Auto Commit Bot",
+      }),
+    ).toThrow(/GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL/i);
+  });
 });

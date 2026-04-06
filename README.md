@@ -18,9 +18,11 @@
 
    ```dotenv
    GEMINI_API_KEY=your-gemini-api-key
+   GIT_AUTHOR_NAME=Auto Commit Bot
+   GIT_AUTHOR_EMAIL=bot@example.com
    ```
 
-That is the only required `.env` value.
+`GEMINI_API_KEY` is required. `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` are optional, but they must be set together if you want the tool to create commits with a specific Git identity.
 
 ## Usage
 

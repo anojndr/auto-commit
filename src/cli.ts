@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config.js";
 import { loadCliEnvironment } from "./environment.js";
 import { GeminiCommitGenerator, DEFAULT_GEMMA_MODEL, type GitContext } from "./geminiCommitGenerator.js";
-import { collectGitContext, commitWithMessage } from "./git.js";
+import { collectGitContext, commitWithMessage, type CommitWithMessageOptions } from "./git.js";
 
 export interface CommitMessageGenerator {
   generate(context: GitContext): Promise<string>;
@@ -26,7 +26,7 @@ export interface CliDependencies {
   loadConfig: (env: NodeJS.ProcessEnv, modelOverride?: string) => RuntimeConfig;
   createGenerator: (config: RuntimeConfig) => CommitMessageGenerator;
   collectGitContext: (cwd: string, options: { autoStage: boolean }) => Promise<GitContext>;
-  commitWithMessage: (cwd: string, message: string) => Promise<void>;
+  commitWithMessage: (cwd: string, message: string, options?: CommitWithMessageOptions) => Promise<void>;
 }
 
 const DEFAULT_DEPENDENCIES: CliDependencies = {
@@ -58,6 +58,7 @@ const HELP_TEXT = [
   "",
   "Environment:",
   "  GEMINI_API_KEY must be set in the environment or a local .env file.",
+  "  GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL may be set together to control commit identity.",
 ].join("\n");
 
 function writeLine(stream: CliDependencies["stdout"] | CliDependencies["stderr"], message: string): void {
@@ -127,7 +128,11 @@ export async function runCli(
     return 0;
   }
 
-  await dependencies.commitWithMessage(cwd, message);
+  if (config.gitAuthor) {
+    await dependencies.commitWithMessage(cwd, message, { author: config.gitAuthor });
+  } else {
+    await dependencies.commitWithMessage(cwd, message);
+  }
   writeLine(dependencies.stdout, message);
 
   return 0;

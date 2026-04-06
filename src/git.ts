@@ -4,9 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import type { GitAuthorConfig } from "./config.js";
 import type { GitContext } from "./geminiCommitGenerator.js";
 
 const execFileAsync = promisify(execFile);
+
+export interface CommitWithMessageOptions {
+  author?: GitAuthorConfig;
+}
 
 async function runGit(cwd: string, args: string[]): Promise<string> {
   try {
@@ -53,7 +58,11 @@ export async function collectGitContext(
   };
 }
 
-export async function commitWithMessage(cwd: string, message: string): Promise<void> {
+export async function commitWithMessage(
+  cwd: string,
+  message: string,
+  options: CommitWithMessageOptions = {},
+): Promise<void> {
   if (!message.trim()) {
     throw new Error("Cannot create a git commit with an empty message.");
   }
@@ -63,7 +72,21 @@ export async function commitWithMessage(cwd: string, message: string): Promise<v
 
   try {
     await writeFile(commitFile, message, "utf8");
-    await runGit(cwd, ["-c", "commit.cleanup=verbatim", "commit", "--file", commitFile]);
+    const args = ["-c", "commit.cleanup=verbatim"];
+
+    if (options.author) {
+      args.push("-c", `user.name=${options.author.name}`, "-c", `user.email=${options.author.email}`);
+    }
+
+    args.push("commit");
+
+    if (options.author) {
+      args.push("--author", `${options.author.name} <${options.author.email}>`);
+    }
+
+    args.push("--file", commitFile);
+
+    await runGit(cwd, args);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }

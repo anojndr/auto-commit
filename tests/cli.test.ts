@@ -81,4 +81,43 @@ describe("runCli", () => {
     expect(collectGitContext).toHaveBeenCalledWith("/repo", { autoStage: true });
     expect(commitWithMessage).toHaveBeenCalledWith("/repo", "fix(cli): handle empty staged diff");
   });
+
+  it("passes the configured git author identity to commitWithMessage", async () => {
+    const stdout = createWritableBuffer();
+    const stderr = createWritableBuffer();
+    const generate = vi.fn().mockResolvedValue("fix(cli): handle empty staged diff");
+    const collectGitContext = vi.fn().mockResolvedValue({
+      statusSummary: "M  src/cli.ts",
+      diffStat: " src/cli.ts | 10 ++++++++++",
+      diff: "diff --git a/src/cli.ts b/src/cli.ts",
+    });
+    const commitWithMessage = vi.fn().mockResolvedValue(undefined);
+
+    const exitCode = await runCli(["commit"], {
+      cwd: "/repo",
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      loadConfig: () => ({
+        apiKey: "test-key",
+        model: DEFAULT_GEMMA_MODEL,
+        gitAuthor: {
+          name: "Auto Commit Bot",
+          email: "bot@example.com",
+        },
+      }),
+      createGenerator: () => ({
+        generate,
+      }),
+      collectGitContext,
+      commitWithMessage,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(commitWithMessage).toHaveBeenCalledWith("/repo", "fix(cli): handle empty staged diff", {
+      author: {
+        name: "Auto Commit Bot",
+        email: "bot@example.com",
+      },
+    });
+  });
 });
