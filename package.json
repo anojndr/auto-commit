@@ -4,7 +4,8 @@
   "description": "Generate Conventional Commit messages with Gemma 4 31B through the Gemini API.",
   "type": "module",
   "bin": {
-    "auto-commit": "./dist/cli.js"
+    "auto-commit": "./dist/cli.js",
+    "autocommit": "./dist/autocommit.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
